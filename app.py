@@ -129,7 +129,7 @@ def create_download_link(text_content, original_filename):
 
 # Streamlit App Configuration
 st.set_page_config(
-    page_title="Universal File to Text Converter",
+    page_title="Docs to TXT Converter",
     page_icon="📄",
     layout="centered",
     initial_sidebar_state="collapsed"
@@ -186,7 +186,7 @@ if uploaded_file is not None:
     
     if file_extension not in allowed_extensions:
         st.error(f"❌ **Unsupported file type**: `{file_extension}`")
-        st.error("� **Supported formats**: PDF, DOCX, PPTX, XLSX, JPG, JPEG, PNG, MP3")
+        st.error("📋 **Supported formats**: PDF, DOCX, PPTX, XLSX, JPG, JPEG, PNG, MP3")
         st.markdown("**Please try:**")
         st.markdown("- Convert your file to a supported format")
         st.markdown("- Check the file extension is correct")
@@ -220,7 +220,7 @@ if uploaded_file is not None:
         st.markdown("---")
         
         # Download Section
-        st.subheader("� Download Text File")
+        st.subheader("💾 Download Text File")
         
         download_filename, b64_content = create_download_link(result['text'], uploaded_file.name)
         
@@ -234,15 +234,15 @@ if uploaded_file is not None:
             type="primary"
         )
         
-        st.success(f"� **{download_filename}** ready for download ({len(result['text']):,} characters)")
+        st.success(f"📄 **{download_filename}** ready for download ({len(result['text']):,} characters)")
         
         st.markdown("---")
         
-        # Expandable Preview Section
-        preview_length = 1000
-        preview_text = result['text'][:preview_length]
+        # Tabbed interface for preview and file size comparison
+        tab1, tab2 = st.tabs(["📖 Rendered Preview", "📊 File Size Comparison"])
         
-        with st.expander(f"📖 Rendered Preview ({len(result['text']):,} characters total)", expanded=False):
+        with tab1:
+            # Preview Section
             st.text_area(
                 label="Converted Text Content",
                 value=result['text'],
@@ -251,11 +251,52 @@ if uploaded_file is not None:
                 label_visibility="collapsed"
             )
             
-            if len(result['text']) > preview_length:
-                remaining_chars = len(result['text']) - preview_length
-                st.info(f"📝 **Full content shown above**. Download the file to save permanently.")
+            st.info(f"📝 **Complete content shown above** ({len(result['text']):,} characters total). Download the file to save permanently.")
+        
+        with tab2:
+            # File Size Comparison Table
+            original_size = info['size_bytes']
+            converted_size = len(result['text'].encode('utf-8'))  # Size of text in bytes
+            
+            # Calculate percentage reduction
+            if original_size > 0:
+                size_reduction_percent = ((original_size - converted_size) / original_size) * 100
             else:
-                st.info(f"� **Complete content shown above**. Download the file to save permanently.")
+                size_reduction_percent = 0
+            
+            # Create comparison table
+            st.markdown("### 📊 Size Comparison")
+            
+            comparison_data = {
+                "File Type": ["Original File", "Converted .txt File"],
+                "File Size": [info['size_readable'], format_file_size(converted_size)]
+            }
+            
+            # Display the comparison table
+            st.dataframe(
+                comparison_data,
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # Show percentage comparison
+            if size_reduction_percent > 0:
+                st.success(f"💡 **Text version is {size_reduction_percent:.1f}% smaller than the original file.**")
+            elif size_reduction_percent < 0:
+                st.info(f"📊 **Text version is {abs(size_reduction_percent):.1f}% larger than the original file.**")
+            else:
+                st.info("📊 **Text version is the same size as the original file.**")
+            
+            # Additional insights
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Space Saved", f"{format_file_size(max(0, original_size - converted_size))}")
+            with col2:
+                if converted_size > 0:
+                    compression_ratio = original_size / converted_size
+                    st.metric("Compression Ratio", f"{compression_ratio:.1f}:1")
+                else:
+                    st.metric("Compression Ratio", "N/A")
         
     else:
         # Display error
@@ -273,8 +314,9 @@ else:
     st.markdown("""
     ### How it works:
     1. **Drag & Drop** or click to upload any supported file
-    2. **Preview** the first 1000 characters of converted text
-    3. **Download** the complete text file
+    2. **Preview** the converted text content
+    3. **Compare** original vs text file sizes
+    4. **Download** the complete text file
     
     That's it! Simple and fast. ⚡
     """)
