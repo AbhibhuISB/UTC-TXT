@@ -136,7 +136,7 @@ st.set_page_config(
 )
 
 # App Header
-st.title("📄 Universal File to Text Converter")
+st.title("📄 Docs to TXT Converter")
 st.markdown("""
 **Simple. Fast. Universal.**  
 Drag, drop, and download your files as clean text.
@@ -145,10 +145,11 @@ Drag, drop, and download your files as clean text.
 # Supported formats info
 with st.expander("📋 Supported File Formats"):
     st.markdown("""
-    - **Documents**: PDF, DOCX, PPTX, XLSX, HTML, TXT, MD
-    - **Images**: JPG, PNG, BMP, GIF (with OCR)
-    - **Data**: CSV, JSON, XML
-    - **Archives**: ZIP (extracts and processes contents)
+    - **Documents**: PDF, DOCX, PPTX, XLSX
+    - **Images**: JPG, JPEG, PNG (with OCR)
+    - **Audio**: MP3
+    
+    **File Size Limit**: 200MB per file
     """)
 
 st.markdown("---")
@@ -156,18 +157,50 @@ st.markdown("---")
 # File Upload Section
 uploaded_file = st.file_uploader(
     "**Drop your file here or click to browse**",
-    type=['pdf', 'docx', 'pptx', 'xlsx', 'html', 'htm', 'txt', 'md', 'csv', 'json', 'xml', 'jpg', 'jpeg', 'png', 'bmp', 'gif', 'zip'],
-    help="Upload any document, image, or data file to convert to text format"
+    type=['pdf', 'docx', 'pptx', 'xlsx', 'jpg', 'jpeg', 'png', 'mp3'],
+    help="Upload PDF, Office documents, images, or MP3 files to convert to text format"
 )
+
+# File size limit (200MB)
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200MB in bytes
 
 # Process uploaded file
 if uploaded_file is not None:
-    # Display file information
-    st.success(f"✅ File uploaded: **{uploaded_file.name}** ({format_file_size(len(uploaded_file.getvalue()))})")
+    # Get file content and size
+    file_content = uploaded_file.getvalue()
+    file_size = len(file_content)
     
-    # Convert file
-    with st.spinner("🔄 Converting file to text..."):
-        file_content = uploaded_file.getvalue()
+    # Check file size
+    if file_size > MAX_FILE_SIZE:
+        st.error(f"❌ **File too large!** Your file is {format_file_size(file_size)}.")
+        st.error(f"📏 **Maximum allowed size**: {format_file_size(MAX_FILE_SIZE)}")
+        st.markdown("**Please try:**")
+        st.markdown("- Compress your file before uploading")
+        st.markdown("- Use a smaller file")
+        st.markdown("- Split large documents into smaller parts")
+        st.stop()
+    
+    # Check file type (additional validation)
+    allowed_extensions = ['.pdf', '.docx', '.pptx', '.xlsx', '.jpg', '.jpeg', '.png', '.mp3']
+    file_extension = Path(uploaded_file.name).suffix.lower()
+    
+    if file_extension not in allowed_extensions:
+        st.error(f"❌ **Unsupported file type**: `{file_extension}`")
+        st.error("� **Supported formats**: PDF, DOCX, PPTX, XLSX, JPG, JPEG, PNG, MP3")
+        st.markdown("**Please try:**")
+        st.markdown("- Convert your file to a supported format")
+        st.markdown("- Check the file extension is correct")
+        st.stop()
+    
+    # Display file information
+    st.success(f"✅ File uploaded: **{uploaded_file.name}** ({format_file_size(file_size)})")
+    
+    # Show progress for larger files
+    if file_size > 10 * 1024 * 1024:  # 10MB
+        st.info(f"📊 **Large file detected** ({format_file_size(file_size)}). Processing may take longer...")
+    
+    # Convert file with improved spinner message
+    with st.spinner("Converting…"):
         result = convert_file_to_text(file_content, uploaded_file.name)
     
     if result['success']:
@@ -186,36 +219,43 @@ if uploaded_file is not None:
         
         st.markdown("---")
         
-        # Preview Section
-        st.subheader("📖 Preview (First 1000 characters)")
-        
-        preview_length = 1000
-        preview_text = result['text'][:preview_length]
-        
-        # Display preview in a code block
-        st.code(preview_text, language="text")
-        
-        if len(result['text']) > preview_length:
-            remaining_chars = len(result['text']) - preview_length
-            st.info(f"📝 **{remaining_chars:,} more characters available in full download**")
-        
-        st.markdown("---")
-        
         # Download Section
-        st.subheader("💾 Download Full Text File")
+        st.subheader("� Download Text File")
         
         download_filename, b64_content = create_download_link(result['text'], uploaded_file.name)
         
         # Download button
         st.download_button(
-            label="📥 Download Full Text File",
+            label="📥 Download TXT File",
             data=base64.b64decode(b64_content),
             file_name=download_filename,
             mime="text/plain",
-            use_container_width=True
+            use_container_width=True,
+            type="primary"
         )
         
-        st.success(f"📄 **{download_filename}** ready for download ({len(result['text']):,} characters)")
+        st.success(f"� **{download_filename}** ready for download ({len(result['text']):,} characters)")
+        
+        st.markdown("---")
+        
+        # Expandable Preview Section
+        preview_length = 1000
+        preview_text = result['text'][:preview_length]
+        
+        with st.expander(f"📖 Rendered Preview ({len(result['text']):,} characters total)", expanded=False):
+            st.text_area(
+                label="Converted Text Content",
+                value=result['text'],
+                height=400,
+                disabled=True,
+                label_visibility="collapsed"
+            )
+            
+            if len(result['text']) > preview_length:
+                remaining_chars = len(result['text']) - preview_length
+                st.info(f"📝 **Full content shown above**. Download the file to save permanently.")
+            else:
+                st.info(f"� **Complete content shown above**. Download the file to save permanently.")
         
     else:
         # Display error
