@@ -31,9 +31,9 @@ def format_file_size(size_bytes):
         size_bytes /= 1024.0
     return f"{size_bytes:.1f} TB"
 
-def convert_file_to_markdown(file_content, filename):
+def convert_file_to_text(file_content, filename):
     """
-    Universal file-to-markdown converter using MarkItDown
+    Universal file-to-text converter using MarkItDown
     
     Args:
         file_content (bytes): Raw file content as bytes
@@ -97,7 +97,7 @@ def convert_file_to_markdown(file_content, filename):
 
 def create_download_link(text_content, original_filename):
     """
-    Create a download link for the converted markdown text
+    Create a download link for the converted text file
     
     Args:
         text_content (str): The converted text content
@@ -109,16 +109,16 @@ def create_download_link(text_content, original_filename):
     # Generate download filename
     base_name = Path(original_filename).stem
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    download_filename = f"{base_name}_converted_{timestamp}.md"
+    download_filename = f"{base_name}_converted_{timestamp}.txt"
     
     # Prepare file content with metadata header
-    file_header = f"""# Converted Markdown Document
-<!-- 
-Original File: {original_filename}
-Conversion Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
-Converted Characters: {len(text_content):,}
-Converter: MarkItDown (Microsoft)
--->
+    file_header = f"""# Converted Text Document
+# Original File: {original_filename}
+# Conversion Date: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+# Converted Characters: {len(text_content):,}
+# Converter: MarkItDown (Microsoft)
+# 
+# ===== CONVERTED CONTENT BELOW =====
 
 """
     
@@ -129,17 +129,17 @@ Converter: MarkItDown (Microsoft)
 
 # Streamlit App Configuration
 st.set_page_config(
-    page_title="Universal File to Markdown Converter",
+    page_title="Universal File to Text Converter",
     page_icon="📄",
     layout="centered",
     initial_sidebar_state="collapsed"
 )
 
 # App Header
-st.title("📄 Universal File to Markdown Converter")
+st.title("📄 Universal File to Text Converter")
 st.markdown("""
 **Simple. Fast. Universal.**  
-Drag, drop, and download your files as clean markdown text.
+Drag, drop, and download your files as clean text.
 """)
 
 # Supported formats info
@@ -157,7 +157,7 @@ st.markdown("---")
 uploaded_file = st.file_uploader(
     "**Drop your file here or click to browse**",
     type=['pdf', 'docx', 'pptx', 'xlsx', 'html', 'htm', 'txt', 'md', 'csv', 'json', 'xml', 'jpg', 'jpeg', 'png', 'bmp', 'gif', 'zip'],
-    help="Upload any document, image, or data file to convert to markdown format"
+    help="Upload any document, image, or data file to convert to text format"
 )
 
 # Process uploaded file
@@ -166,9 +166,9 @@ if uploaded_file is not None:
     st.success(f"✅ File uploaded: **{uploaded_file.name}** ({format_file_size(len(uploaded_file.getvalue()))})")
     
     # Convert file
-    with st.spinner("🔄 Converting file to markdown..."):
+    with st.spinner("🔄 Converting file to text..."):
         file_content = uploaded_file.getvalue()
-        result = convert_file_to_markdown(file_content, uploaded_file.name)
+        result = convert_file_to_text(file_content, uploaded_file.name)
     
     if result['success']:
         # Display conversion success
@@ -193,7 +193,7 @@ if uploaded_file is not None:
         preview_text = result['text'][:preview_length]
         
         # Display preview in a code block
-        st.code(preview_text, language="markdown")
+        st.code(preview_text, language="text")
         
         if len(result['text']) > preview_length:
             remaining_chars = len(result['text']) - preview_length
@@ -202,16 +202,16 @@ if uploaded_file is not None:
         st.markdown("---")
         
         # Download Section
-        st.subheader("💾 Download Full Markdown File")
+        st.subheader("💾 Download Full Text File")
         
         download_filename, b64_content = create_download_link(result['text'], uploaded_file.name)
         
         # Download button
         st.download_button(
-            label="📥 Download Full Markdown File",
+            label="📥 Download Full Text File",
             data=base64.b64decode(b64_content),
             file_name=download_filename,
-            mime="text/markdown",
+            mime="text/plain",
             use_container_width=True
         )
         
@@ -233,8 +233,8 @@ else:
     st.markdown("""
     ### How it works:
     1. **Drag & Drop** or click to upload any supported file
-    2. **Preview** the first 1000 characters of converted markdown
-    3. **Download** the complete markdown file
+    2. **Preview** the first 1000 characters of converted text
+    3. **Download** the complete text file
     
     That's it! Simple and fast. ⚡
     """)
